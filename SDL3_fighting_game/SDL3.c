@@ -557,8 +557,8 @@ void setup(SDL_Renderer *ren, SDL_Window *win) {
 	
     printf("cleared window \n");
 
-    SDL_Texture* tex_red = loadTexture(ren, "stickfigure_red.bmp");
-    SDL_Texture* tex_white = loadTexture(ren, "stickfigure_white.bmp");
+    SDL_Texture* tex_red = loadTexture(ren, "assets/stickfigure_red.bmp");
+    SDL_Texture* tex_white = loadTexture(ren, "assets/stickfigure_white.bmp");
     Player p1 , p2;
     Init_player(&p1, tex_white, 100, 700, 1);
     Init_player(&p2, tex_red, 1280-100, 700, 1);
