@@ -4,8 +4,6 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_scancode.h>
 #include <math.h>
-//#include <SDL3/SDL_render.h>
-//#include <SDL3/SDL_surface.h>
 
 typedef struct {
     int health;
@@ -549,8 +547,6 @@ void game_loop(SDL_Renderer* ren, SDL_Window* win) {
         SDL_RenderPresent(ren);
 
         SDL_Delay(16);
-
-        // TODO: parry (make circle around player for effect)
     }
     game_end(ren, win, (p1.health <= 0) ? 2 : 1);
 }
