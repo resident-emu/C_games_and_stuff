@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <SDL3/SDL.h>
+
+int main(int argc, char const *argv[])
+{
+    SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_Window *win = SDL_CreateWindow("SIN_WAVE_TEST", 300, 300, 0);
+    SDL_Renderer *ren = SDL_CreateRenderer(win, NULL);
+    int running = 1;
+    float mx, my;
+    mx = 100;
+    my = 50;
+    float time = 0;
+    while (running) {
+
+        if (time > 3.14*2) {
+            time = 0;
+        }
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT)
+                running = 0;
+            else if (event.type == SDL_EVENT_KEY_DOWN ) {
+                SDL_Scancode sc = event.key.scancode;
+
+                if (sc == SDL_SCANCODE_UP) {
+                    my += 1;
+                }
+                if (sc == SDL_SCANCODE_DOWN) {
+                    my -= 1;
+                }
+                if (sc == SDL_SCANCODE_RIGHT) {
+                    mx += 1;
+                }
+                if (sc == SDL_SCANCODE_LEFT) {
+                    mx -= 1;
+                }
+            }
+        }
+
+
+        SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+        SDL_RenderClear(ren);
+
+        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+        for(int i = 0; i < 300; i++) {
+            SDL_RenderLine(ren, i, 150 + my*sin(i*((2*3.141592653f)/mx) - time) , i + 1, 150 + my*sin((i+1)*((2*3.141592653f)/mx) - time));
+        }
+        time += 0.1;
+
+        SDL_RenderPresent(ren);
+        SDL_Delay(16);
+    }
+    SDL_DestroyRenderer(ren);
+    SDL_DestroyWindow(win);
+    SDL_Quit();
+    return 0;
+}
