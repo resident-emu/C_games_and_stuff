@@ -1,0 +1,383 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <SDL3/SDL.h>
+
+
+struct row {
+    int rowNum;
+    char chars[1024];
+    struct row *next;
+};
+
+struct cursor {
+    int posX, posY;
+    int row, col;
+    int H, W;
+};
+
+void InitCursor(struct cursor *cursor) {
+    cursor->posX = 0;
+    cursor->posY = 30 - 2;
+    cursor->row = 0;
+    cursor->col = 0;
+    cursor->H = 13;
+    cursor->W = 8;
+}
+
+void InitRow(struct row *row) {
+    row->chars[0] = '\0';
+    row->next = NULL;
+}
+
+struct cursor *cursor;
+struct row *head;
+struct row *current;
+
+int top_row;
+int bottom_row;
+
+void AddNewRow() {
+    struct row *new_row = malloc(sizeof(struct row));
+    if (!new_row) return;
+    InitRow(new_row);
+
+    if (cursor->col == 0 && current == head) {
+        if (head->next == NULL) {
+            head->next = new_row;
+            current = new_row;
+        }
+        else {
+            head->next = new_row;
+            new_row->next = current;
+            current = new_row;
+        }
+    }
+    else if (cursor->col == 0) {
+        struct row *prev = head;
+        while (prev->next != current && prev->next != NULL) {
+            prev = prev->next;
+        }
+        prev->next = new_row;
+        new_row->next = current;
+    }
+    else {
+        new_row->next = current->next;
+        current->next = new_row;
+    }
+
+    current = new_row;
+    cursor->row += 1;
+    cursor->col = 0;
+    cursor->posX = 0;
+    cursor->posY += 15;
+}
+
+void openFile(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        return;
+    }
+    head = NULL;
+    current = NULL;
+
+    char line[1024];
+    while (fgets(line, sizeof(line), file)) {
+        struct row *new_row = malloc(sizeof(struct row));
+        if (!new_row) {
+            fclose(file);
+            return;
+        }
+
+        InitRow(new_row);
+        line[strcspn(line, "\n")] = '\0';
+        strncpy(new_row->chars, line, sizeof(new_row->chars) - 1);
+        new_row->chars[sizeof(new_row->chars) - 1] = '\0';
+
+        if (!head) {
+            head = new_row;
+            current = new_row;
+        } else {
+            current->next = new_row;
+            current = new_row;
+        }
+    }
+
+    fclose(file);
+    current = head;
+    cursor->row = 0;
+    cursor->col = 0;
+    cursor->posX = 0;
+    cursor->posY = 30 - 2;
+}
+
+void saveFile(const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) {
+        perror("Error saving file");
+        return;
+    }
+    struct row *temp = head;
+    while (temp) {
+        fprintf(file, "%s\n", temp->chars);
+        temp = temp->next;
+    }
+    fclose(file);
+}
+
+
+void userInput(SDL_Event *event, char *buffer, const char *filename, int screenWidth, int screenHeight) {
+    SDL_Scancode sc = event->key.scancode;
+    int len = strlen(buffer);
+    char c = '\0';
+
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+        // Handle key inputs here
+        if (SDL_GetModState() & SDL_KMOD_SHIFT) {
+            // Shift key pressed
+            if (sc >= SDL_SCANCODE_A && sc <= SDL_SCANCODE_Z) {
+                c = 'A' + (sc - SDL_SCANCODE_A);
+            }
+            else if (sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9) {
+                c = '1' + (sc - SDL_SCANCODE_1);
+                    if (c == '1') c = '!';
+                    else if (c == '2') c = '"';
+                    else if (c == '3') c = '#';
+                    else if (c == '4') c = '$';
+                    else if (c == '5') c = '%';
+                    else if (c == '6') c = '&';
+                    else if (c == '7') c = '/';
+                    else if (c == '8') c = '(';
+                    else if (c == '9') c = ')';
+            } else if (sc == SDL_SCANCODE_0) c = '=';
+            else if (sc == SDL_SCANCODE_MINUS) c = '?';
+            else if (sc == SDL_SCANCODE_COMMA) c = ';';
+            else if (sc == SDL_SCANCODE_PERIOD) c = ':';
+            else if (sc == SDL_SCANCODE_BACKSLASH ) c = '*';
+        }   
+        else if (SDL_GetModState() & SDL_KMOD_CTRL) {
+            // Control key pressed
+        }
+        else if (SDL_GetModState() & SDL_KMOD_ALT ) {//ALTGR maybe later
+            // Alt key pressed
+            if (sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9) {
+                c = '1' + (sc - SDL_SCANCODE_1);
+                    if (c == '2') c = '@';
+                    else if (c == '3') c = '£';
+                    else if (c == '4') c = '$';
+                    else if (c == '5') c = '€';
+                    else if (c == '7') c = '{';
+                    else if (c == '8') c = '[';
+                    else if (c == '9') c = ']';
+            } else if (sc == SDL_SCANCODE_0) c = '}';
+        }
+        else {
+            if (sc >= SDL_SCANCODE_A && sc <= SDL_SCANCODE_Z) {
+                c = 'a' + (sc - SDL_SCANCODE_A);
+            }
+
+            else if (sc >= SDL_SCANCODE_1 && sc <= SDL_SCANCODE_9) {
+                c = '1' + (sc - SDL_SCANCODE_1);
+            } else if (sc == SDL_SCANCODE_0) c = '0';
+            else if (sc == SDL_SCANCODE_MINUS) c = '+';
+            else if (sc == SDL_SCANCODE_COMMA) c = ',';
+            else if (sc == SDL_SCANCODE_PERIOD) c = '.';
+            else if (sc == SDL_SCANCODE_BACKSLASH ) c = '\'';
+            // ---ARROW KEYS---
+            else if (sc == SDL_SCANCODE_LEFT) {
+                if (cursor->col > 0) {
+                    cursor->col -= 1;
+                    cursor->posX -= cursor->W;
+                }
+            } else if (sc == SDL_SCANCODE_RIGHT) {
+                if (cursor->col < len) {
+                    cursor->col += 1;
+                    cursor->posX += cursor->W;
+                }
+            } else if (sc == SDL_SCANCODE_UP) {
+                if (cursor->row > 0) {
+                    cursor->row -= 1;
+                    cursor->posY -= 15;
+                    struct row *temp = head;
+                    for (int i = 0; i < cursor->row; i++) temp = temp->next;
+                    current = temp;
+                    int prev_len = strlen(current->chars);
+                    cursor->col = (cursor->col > prev_len) ? prev_len : cursor->col;
+                    cursor->posX = cursor->col * cursor->W;
+                    }
+            } else if (sc == SDL_SCANCODE_DOWN) {
+                if (current->next != NULL) {
+                    cursor->row += 1;
+                    cursor->posY += 15;
+                    current = current->next;
+                    int next_len = strlen(current->chars);
+                    cursor->col = (cursor->col > next_len) ? next_len : cursor->col;
+                    cursor->posX = cursor->col * cursor->W;
+                }
+            }
+            // ---BACKSPACE---
+            else if (sc == SDL_SCANCODE_BACKSPACE) {
+                if (cursor->col == 0) {
+                    if (cursor->row == 0) {
+                        struct row *temp = head;
+                        head = head->next;
+                        free(temp);
+                    }
+                    else {
+                        struct row *temp = head;
+                        for (int i = 0; i < cursor->row - 1; i++) temp = temp->next;
+                        struct row *to_delete = current;
+                        temp->next = to_delete->next;
+                        free(to_delete);
+                        current = temp;
+                        cursor->row -= 1;
+                        cursor->col = strlen(current->chars);
+                        cursor->posY -= 15;
+                        cursor->posX = cursor->col * cursor->W;
+                    }
+                    
+                }
+                else if (cursor->col > 0) {
+                    for (int i = cursor->col - 1; i < len; i++) {
+                        buffer[i] = buffer[i + 1];
+                    }
+                    cursor->col -= 1;
+                    cursor->posX -= cursor->W;
+                } else if (len > 0) {
+                    buffer[len - 1] = '\0';
+                    cursor->col = strlen(buffer);
+                    cursor->posX = cursor->col * cursor->W;
+                } else {
+                    if (cursor->row > 0) {
+                        struct row *temp = head;
+                        for (int i = 0; i < cursor->row - 1; i++) temp = temp->next;
+                        struct row *to_delete = temp->next;
+                        temp->next = to_delete->next;
+                        free(to_delete);
+                        current = temp;
+                        cursor->row -= 1;
+                        cursor->col = strlen(current->chars);
+                        cursor->posY -= 15;
+                        cursor->posX = cursor->col * cursor->W;
+                    } else {
+                        cursor->posX = 0;
+                        cursor->col = 0;
+                    }
+                }
+            }
+            // ---SPACE---
+            else if (sc == SDL_SCANCODE_SPACE) c = ' ';
+            // ---RETURN---
+            else if (sc == SDL_SCANCODE_RETURN) AddNewRow();
+            
+        }
+        if (c != '\0') {
+            if (cursor->col <= len) {
+                for (int i = len; i >= cursor->col; i--) buffer[i + 1] = buffer[i];
+                    buffer[cursor->col] = c;
+                    cursor->col += 1;
+                    cursor->posX += cursor->W;
+            }
+        }
+    }
+    // MOUSE shtuff
+    else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == SDL_BUTTON_LEFT) {
+        float mouseX = event->button.x;
+        float mouseY = event->button.y;
+
+        if ((mouseX >= screenWidth - 120) && (mouseX <= screenWidth) && (mouseY >= 0) && (mouseY <= 50)) {
+            saveFile(filename);
+        }
+    }
+    if (cursor->row < top_row && top_row > 0) {
+        top_row--;
+        bottom_row--;
+    }
+    else if (cursor->row >= bottom_row) {
+        top_row++;
+        bottom_row++;
+    }
+    cursor->posY = (cursor->row - top_row) * 15 + 31 - 2;
+}
+
+
+int main(int argc, char const *argv[])
+{
+    SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_Window *win = SDL_CreateWindow("SDL3", 1280, 960, 0);
+    SDL_Renderer *ren = SDL_CreateRenderer(win, NULL);
+
+    cursor = malloc(sizeof(struct cursor));
+    InitCursor(cursor);
+    head = malloc(sizeof(struct row));
+    InitRow(head);
+    current = head;
+    if (argc > 1) {
+        openFile(argv[1]);
+    }
+    char input_buffer[1024] = {0};
+    int running = 1;
+    int screenWidth;
+    int screenHeight;
+
+    SDL_Texture *tex = NULL;
+    SDL_Color white = {255, 255, 255, 255};
+
+    
+    top_row = 0;
+    bottom_row = 31;
+    
+    while (running) {
+        SDL_Event event;
+        SDL_GetWindowSize(win, &screenWidth, &screenHeight);
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT) running = 0;
+            else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {userInput(&event, current->chars, argv[1], screenWidth, screenHeight);}
+        }
+
+        SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+        SDL_RenderClear(ren);
+
+        if (cursor->col < 0) cursor->col = 0;
+        if (cursor->posX < 0) cursor->posX = 0;
+        SDL_FRect cursorRect = { cursor->posX, cursor->posY, cursor->W, cursor->H };
+        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+        SDL_RenderFillRect(ren, &cursorRect);
+
+        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+        SDL_RenderLine(ren, 0, 25, screenWidth, 25);
+        SDL_RenderLine(ren, screenWidth / 2 - 60, 0, screenWidth / 2 - 60, 25);
+        SDL_RenderDebugTextFormat(ren, screenWidth / 2 - 45, 10, "SAVE");
+
+        SDL_SetRenderScale(ren, 2, 2);
+       const int line_height = 15;
+        struct row *r = head;
+        int y = 30;
+        int row_index = 0;
+        for (int i = 0; i < top_row && r; i++) r = r->next;
+
+        while (r && row_index <= (bottom_row - top_row)) {
+            SDL_RenderDebugTextFormat(ren, 0, y, "%s", r->chars);
+            y += line_height;
+            r = r->next;
+            row_index++;
+        }
+        SDL_RenderPresent(ren);
+        SDL_Delay(16);
+    }
+    struct row *r = head;
+    while (r) {
+        struct row *next = r->next;
+        free(r);
+        r = next;
+    }
+    free(cursor);
+
+    SDL_DestroyTexture(tex);
+    SDL_DestroyRenderer(ren);
+    SDL_DestroyWindow(win);
+    SDL_Quit();
+    return 0;
+}
