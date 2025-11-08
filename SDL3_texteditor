@@ -3,9 +3,7 @@
 #include <string.h>
 #include <SDL3/SDL.h>
 
-
 struct row {
-    int rowNum;
     char chars[1024];
     struct row *next;
 };
@@ -125,7 +123,7 @@ void saveFile(const char *filename) {
     fclose(file);
 }
 
-
+// New user input func
 void userInput(SDL_Event *event, char *buffer, const char *filename, int screenWidth, int screenHeight) {
     SDL_Scancode sc = event->key.scancode;
     int len = strlen(buffer);
@@ -154,6 +152,7 @@ void userInput(SDL_Event *event, char *buffer, const char *filename, int screenW
             else if (sc == SDL_SCANCODE_COMMA) c = ';';
             else if (sc == SDL_SCANCODE_PERIOD) c = ':';
             else if (sc == SDL_SCANCODE_BACKSLASH ) c = '*';
+            else if (sc == SDL_SCANCODE_SPACE) c = ' ';
         }   
         else if (SDL_GetModState() & SDL_KMOD_CTRL) {
             // Control key pressed
@@ -219,9 +218,7 @@ void userInput(SDL_Event *event, char *buffer, const char *filename, int screenW
             else if (sc == SDL_SCANCODE_BACKSPACE) {
                 if (cursor->col == 0) {
                     if (cursor->row == 0) {
-                        struct row *temp = head;
-                        head = head->next;
-                        free(temp);
+                        return;
                     }
                     else {
                         struct row *temp = head;
@@ -316,6 +313,7 @@ int main(int argc, char const *argv[])
     if (argc > 1) {
         openFile(argv[1]);
     }
+
     char input_buffer[1024] = {0};
     int running = 1;
     int screenWidth;
